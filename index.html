@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>15 Tosh</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#0f1626;--panel:#1b2740;--cell:#27344f;
+  --txt:#e8edf7;--muted:#8a98b8;--accent:#f5b942;
+  --tile:#3f527a;--ok:#1e5c3a;--ok-txt:#7ef0b0;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;}
+body{
+  background:radial-gradient(circle at 50% -10%,#1c2945 0%,var(--bg) 60%);
+  color:var(--txt);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  min-height:100dvh;padding:12px 16px;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+}
+.wrap{width:100%;max-width:420px;}
+
+header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.logo{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--accent);line-height:1;flex-shrink:0;}
+.logo small{display:block;font-size:9px;font-weight:600;letter-spacing:1.5px;color:var(--muted);margin-top:2px;}
+.player{flex:1;background:var(--panel);border-radius:10px;padding:5px 10px;min-width:0;}
+.player .lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.player .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stats{display:flex;gap:6px;flex-shrink:0;}
+.stat{background:var(--panel);border-radius:10px;padding:5px 9px;text-align:center;min-width:54px;}
+.stat b{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;}
+.stat span{font-size:16px;font-weight:800;}
+
+.board{position:relative;background:var(--panel);border-radius:16px;padding:10px;aspect-ratio:1;width:100%;touch-action:none;}
+.bgcells{position:absolute;inset:10px;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:10px;}
+.bgcell{background:var(--cell);border-radius:9px;}
+.tiles{position:absolute;inset:10px;}
+.tile{
+  position:absolute;top:0;left:0;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:9px;font-weight:800;font-size:clamp(16px,5vw,26px);
+  cursor:pointer;background:var(--tile);color:var(--txt);
+  transition:transform .13s ease;will-change:transform;
+}
+.tile.correct{background:var(--ok);color:var(--ok-txt);}
+.tile:active{filter:brightness(1.2);}
+
+.prog-row{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:8px;}
+.prog{margin-top:5px;height:5px;background:var(--cell);border-radius:3px;overflow:hidden;}
+.prog-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .3s ease;}
+
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.btn{background:var(--panel);color:var(--txt);border:2px solid var(--cell);padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;}
+.btn:active{background:#2a3a5c;}
+.btn.gold{background:var(--accent);color:#1b2740;border-color:transparent;}
+
+/* Win overlay */
+.ov{position:absolute;inset:0;background:rgba(12,18,32,.93);border-radius:16px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:10;padding:20px;}
+.ov.show{display:flex;}
+.ov h2{font-size:34px;}
+.ws{background:var(--panel);border-radius:12px;padding:12px 18px;width:100%;}
+.ws-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;}
+.ws-row span{color:var(--muted);font-size:13px;}
+.ws-row strong{font-size:15px;font-weight:800;}
+.ws-rec{color:var(--accent);font-size:12px;text-align:center;margin-top:6px;}
+.ov-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+
+/* Leaderboard panel */
+.lb-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:19;display:none;}
+.lb-bd.show{display:block;}
+.lb{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:100%;max-width:420px;
+  background:var(--panel);border-radius:20px 20px 0 0;
+  padding:14px 16px 24px;
+  transition:transform .28s ease;
+  z-index:20;max-height:80dvh;
+  display:flex;flex-direction:column;
+}
+.lb.open{transform:translateX(-50%) translateY(0);}
+.lb-handle{width:36px;height:4px;background:var(--muted);border-radius:2px;margin:0 auto 12px;opacity:.4;}
+.lb-title{font-size:17px;font-weight:800;text-align:center;margin-bottom:12px;color:var(--accent);}
+.lb-body{overflow-y:auto;flex:1;}
+.lb-row{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;margin-bottom:5px;}
+.lb-row.me{background:rgba(245,185,66,.11);border:1px solid rgba(245,185,66,.28);}
+.lb-rank{font-size:17px;font-weight:800;min-width:26px;text-align:center;color:var(--muted);}
+.lb-rank.g{color:#f5b942;}.lb-rank.s{color:#a8b5c8;}.lb-rank.b{color:#c47c42;}
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-sub{font-size:11px;color:var(--muted);}
+.lb-score{font-size:17px;font-weight:800;color:var(--accent);white-space:nowrap;}
+.lb-msg{text-align:center;color:var(--muted);font-size:13px;padding:20px;line-height:1.8;}
+.lb-close{background:var(--cell);border:none;color:var(--txt);padding:11px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;width:100%;}
+.hint{text-align:center;color:var(--muted);font-size:11px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">15 TOSH<small>TARTIBGA SOL</small></div>
+    <div class="player"><div class="lbl">O'yinchi</div><div class="nm" id="pName">...</div></div>
+    <div class="stats">
+      <div class="stat"><b>Qadam</b><span id="moves">0</span></div>
+      <div class="stat"><b>Vaqt</b><span id="timer">0:00</span></div>
+    </div>
+  </header>
+
+  <div class="board" id="board">
+    <div class="bgcells" id="bgcells"></div>
+    <div class="tiles" id="tilesEl"></div>
+    <div class="ov" id="ov">
+      <h2>🎉 Barakalla!</h2>
+      <div class="ws" id="ws"></div>
+      <div class="ov-btns">
+        <button class="btn" id="ovLb">🏆 Reyting</button>
+        <button class="btn gold" id="ovNew">Qaytadan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="prog-row"><span>To'g'ri joyda</span><span id="progLbl">0 / 15</span></div>
+  <div class="prog"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+
+  <div class="btns">
+    <button class="btn" id="btnLb">🏆 Reyting</button>
+    <button class="btn gold" id="btnNew">🔀 Yangi o'yin</button>
+  </div>
+  <p class="hint">Raqamni bosing yoki svayp qiling · 1–15 tartibga soling</p>
+</div>
+
+<div class="lb-bd" id="lbBd"></div>
+<div class="lb" id="lb">
+  <div class="lb-handle"></div>
+  <div class="lb-title">🏆 Eng yaxshi natijalar</div>
+  <div class="lb-body" id="lbBody"><div class="lb-msg">Yuklanmoqda...</div></div>
+  <button class="lb-close" id="lbClose">Yopish</button>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   SUPABASE SOZLAMALAR — quyidagilarni o'zgartiring
+   ═══════════════════════════════════════════════ */
+const SB_URL = 'https://XXXX.supabase.co';    // ← o'zgartiring
+const SB_KEY = 'SUPABASE_ANON_KEY';           // ← o'zgartiring
+
+/*
+  SUPABASE JADVAL SQL (bir marta SQL Editor'ga joylang):
+  ──────────────────────────────────────────────────────
+  create table scores (
+    id uuid default gen_random_uuid() primary key,
+    user_id text unique not null,
+    user_name text not null,
+    moves integer not null,
+    time_seconds integer not null,
+    updated_at timestamptz default now()
+  );
+  alter table scores enable row level security;
+  create policy "read"   on scores for select using (true);
+  create policy "insert" on scores for insert with check (true);
+  create policy "update" on scores for update using (true);
+*/
+
+/* ── Telegram WebApp ── */
+const tg = window.Telegram?.WebApp;
+if(tg){ tg.ready(); tg.expand(); try{tg.setHeaderColor('#0f1626');}catch(e){} try{tg.setBackgroundColor('#0f1626');}catch(e){} }
+const tgU = tg?.initDataUnsafe?.user;
+const UID  = tgU?.id ? String(tgU.id) : 'g_'+Math.random().toString(36).slice(2,9);
+const UNAME= tgU ? (tgU.first_name+(tgU.last_name?' '+tgU.last_name:'')) : (tgU?.username||'Mehmon');
+document.getElementById('pName').textContent = UNAME;
+
+/* ── Supabase ── */
+const SB_OK = !SB_URL.includes('XXXX') && !SB_KEY.includes('SUPABASE');
+
+async function sbFetch(path, opts={}){
+  return fetch(SB_URL+'/rest/v1/'+path,{...opts,headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,...(opts.headers||{})}});
+}
+
+async function saveScore(moves, secs){
+  if(!SB_OK) return;
+  try{
+    const r1 = await sbFetch(`scores?user_id=eq.${encodeURIComponent(UID)}&select=moves`);
+    const ex  = await r1.json();
+    if(Array.isArray(ex) && ex[0]?.moves <= moves) return;
+    await sbFetch('scores',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({user_id:UID,user_name:UNAME,moves,time_seconds:secs,updated_at:new Date().toISOString()})});
+  }catch(e){console.warn(e);}
+}
+
+async function loadLb(){
+  if(!SB_OK) return null;
+  try{
+    const r = await sbFetch('scores?select=user_name,user_id,moves,time_seconds&order=moves.asc,time_seconds.asc&limit=15');
+    return await r.json();
+  }catch(e){return null;}
+}
+
+/* ── Leaderboard UI ── */
+const lbEl  = document.getElementById('lb');
+const lbBd  = document.getElementById('lbBd');
+const lbBody= document.getElementById('lbBody');
+
+function fmtT(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function openLb(){
+  lbEl.classList.add('open'); lbBd.classList.add('show');
+  lbBody.innerHTML='<div class="lb-msg">Yuklanmoqda...</div>';
+  const data = await loadLb();
+  if(!data){lbBody.innerHTML='<div class="lb-msg">Supabase sozlanmagan.<br>SB_URL va SB_KEY ni kiriting.</div>';return;}
+  if(!data.length){lbBody.innerHTML='<div class="lb-msg">Hali natija yo\'q.<br>Birinchi bo\'ling! 🏆</div>';return;}
+  const medals=['','🥇','🥈','🥉'], mc=['','g','s','b'];
+  lbBody.innerHTML=data.map((r,i)=>{
+    const me=r.user_id===UID;
+    const rank=i<3?`<span class="lb-rank ${mc[i+1]}">${medals[i+1]}</span>`:`<span class="lb-rank">${i+1}</span>`;
+    return`<div class="lb-row${me?' me':''}">
+      ${rank}
+      <div class="lb-info">
+        <div class="lb-name">${esc(r.user_name)}${me?' 👈':''}</div>
+        <div class="lb-sub">${fmtT(r.time_seconds)}</div>
+      </div>
+      <div class="lb-score">${r.moves} qadam</div>
+    </div>`;
+  }).join('');
+}
+
+function closeLb(){lbEl.classList.remove('open');lbBd.classList.remove('show');}
+
+['lbClose','lbBd'].forEach(id=>document.getElementById(id).addEventListener('click',closeLb));
+document.getElementById('btnLb').addEventListener('click',openLb);
+document.getElementById('ovLb').addEventListener('click',openLb);
+
+/* ── Game ── */
+const S=4, GAP=10;
+let tiles=[],moves=0,timer=0,started=false,won=false,timerInt=null;
+let best=loadBest();
+const tEls={};
+
+const bg=document.getElementById('bgcells');
+for(let i=0;i<S*S;i++){const c=document.createElement('div');c.className='bgcell';bg.appendChild(c);}
+
+const cont=document.getElementById('tilesEl');
+for(let v=1;v<=15;v++){
+  const el=document.createElement('div');el.className='tile';el.textContent=v;
+  el.addEventListener('click',()=>tryMove(tiles.indexOf(v)));
+  cont.appendChild(el);tEls[v]=el;
+}
+
+function loadBest(){try{return parseInt(localStorage.getItem('15bv3'))||0;}catch(e){return 0;}}
+function saveBest(v){try{localStorage.setItem('15bv3',v);}catch(e){}}
+
+function applyPos(){
+  const w=cont.offsetWidth, ts=(w-GAP*(S-1))/S, step=ts+GAP;
+  for(let v=1;v<=15;v++){tEls[v].style.width=ts+'px';tEls[v].style.height=ts+'px';}
+  for(let i=0;i<S*S;i++){
+    const v=tiles[i];if(!v)continue;
+    const row=Math.floor(i/S),col=i%S;
+    tEls[v].style.transform=`translate(${col*step}px,${row*step}px)`;
+    tEls[v].classList.toggle('correct',i===v-1);
+  }
+}
+
+function render(){
+  applyPos();
+  document.getElementById('moves').textContent=moves;
+  const c=countC();
+  document.getElementById('progLbl').textContent=c+' / 15';
+  document.getElementById('progBar').style.width=(c/15*100)+'%';
+}
+
+function countC(){let n=0;for(let i=0;i<15;i++)if(tiles[i]===i+1)n++;return n;}
+
+function solvable(arr){
+  const flat=arr.filter(x=>x!==0);let inv=0;
+  for(let i=0;i<flat.length-1;i++)for(let j=i+1;j<flat.length;j++)if(flat[i]>flat[j])inv++;
+  const rfb=S-Math.floor(arr.indexOf(0)/S);
+  return(rfb%2===0)?(inv%2===1):(inv%2===0);
+}
+
+function isSolved(arr){for(let i=0;i<S*S-1;i++)if(arr[i]!==i+1)return false;return arr[S*S-1]===0;}
+
+function buildShuffled(){
+  let arr;
+  do{arr=[...Array(S*S).keys()];for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
+  while(!solvable(arr)||isSolved(arr));
+  return arr;
+}
+
+function adj(idx){
+  const bl=tiles.indexOf(0),r1=Math.floor(idx/S),c1=idx%S,r2=Math.floor(bl/S),c2=bl%S;
+  return(r1===r2&&Math.abs(c1-c2)===1)||(c1===c2&&Math.abs(r1-r2)===1);
+}
+
+function tryMove(idx){
+  if(idx<0||!adj(idx)||won)return;
+  const bl=tiles.indexOf(0);[tiles[idx],tiles[bl]]=[tiles[bl],tiles[idx]];
+  moves++;
+  if(!started){started=true;timerInt=setInterval(()=>{timer++;const m=Math.floor(timer/60),s=timer%60;document.getElementById('timer').textContent=m+':'+String(s).padStart(2,'0');},1000);}
+  render();
+  if(isSolved(tiles)){
+    won=true;clearInterval(timerInt);
+    const isRec=!best||moves<best;
+    if(isRec){best=moves;saveBest(best);}
+    saveScore(moves,timer);
+    setTimeout(()=>{
+      document.getElementById('ws').innerHTML=`
+        <div class="ws-row"><span>Qadam</span><strong>${moves}</strong></div>
+        <div class="ws-row"><span>Vaqt</span><strong>${fmtT(timer)}</strong></div>
+        <div class="ws-row"><span>Rekord</span><strong>${best} qadam</strong></div>
+        ${isRec?'<div class="ws-rec">🏆 Yangi shaxsiy rekord!</div>':''}
+      `;
+      document.getElementById('ov').classList.add('show');
+    },350);
+  }
+}
+
+function init(){
+  tiles=buildShuffled();moves=0;timer=0;won=false;started=false;
+  clearInterval(timerInt);
+  document.getElementById('timer').textContent='0:00';
+  document.getElementById('ov').classList.remove('show');
+  closeLb();render();
+}
+
+document.getElementById('btnNew').addEventListener('click',init);
+document.getElementById('ovNew').addEventListener('click',init);
+
+window.addEventListener('keydown',e=>{
+  const bl=tiles.indexOf(0),br=Math.floor(bl/S),bc=bl%S;let t=-1;
+  if(e.key==='ArrowRight'&&bc>0)t=bl-1;if(e.key==='ArrowLeft'&&bc<S-1)t=bl+1;
+  if(e.key==='ArrowDown'&&br>0)t=bl-S;if(e.key==='ArrowUp'&&br<S-1)t=bl+S;
+  if(t>=0){e.preventDefault();tryMove(t);}
+});
+
+let sx=0,sy=0;
+document.getElementById('board').addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+document.getElementById('board').addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)<20&&Math.abs(dy)<20)return;
+  const bl=tiles.indexOf(0),br=Math.floor(bl/S),bc=bl%S;let t=-1;
+  if(Math.abs(dx)>Math.abs(dy)){if(dx>0&&bc>0)t=bl-1;if(dx<0&&bc<S-1)t=bl+1;}
+  else{if(dy>0&&br>0)t=bl-S;if(dy<0&&br<S-1)t=bl+S;}
+  if(t>=0)tryMove(t);
+},{passive:true});
+
+window.addEventListener('resize',()=>{if(tiles.length)applyPos();});
+requestAnimationFrame(()=>requestAnimationFrame(init));
+</script>
+</body>
+</html>
