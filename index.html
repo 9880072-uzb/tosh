@@ -183,7 +183,7 @@ async function saveScore(moves, secs){
     const r1 = await sbFetch(`scores?user_id=eq.${encodeURIComponent(UID)}&select=moves`);
     const ex  = await r1.json();
     if(Array.isArray(ex) && ex[0]?.moves <= moves) return;
-    await sbFetch('scores',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+    await sbFetch('scores?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify({user_id:UID,user_name:UNAME,moves,time_seconds:secs,updated_at:new Date().toISOString()})});
   }catch(e){console.warn(e);}
 }
