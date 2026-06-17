@@ -191,7 +191,7 @@ async function saveScore(moves, secs){
 async function loadLb(){
   if(!SB_OK) return null;
   try{
-    const r = await sbFetch('scores?select=user_name,user_id,moves,time_seconds&order=moves.asc,time_seconds.asc&limit=15');
+    const r = await sbFetch('scores?select=user_name,user_id,moves,time_seconds&order=moves.asc,time_seconds.asc&limit=75');
     return await r.json();
   }catch(e){return null;}
 }
